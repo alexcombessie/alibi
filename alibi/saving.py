@@ -8,18 +8,15 @@ import warnings
 
 import dill
 import numpy as np
-import tensorflow as tf
 
 if TYPE_CHECKING:
     from alibi.api.interfaces import Explainer
     from alibi.explainers import (
         AnchorImage,
         AnchorText,
-        IntegratedGradients,
         KernelShap,
         TreeShap
     )
-    import keras
 
 from alibi.version import __version__
 
@@ -112,32 +109,6 @@ def _simple_load(path: Union[str, os.PathLike], predictor, meta) -> 'Explainer':
         explainer = dill.load(f)
     explainer.reset_predictor(predictor)
     return explainer
-
-
-def _load_IntegratedGradients(path: Union[str, os.PathLike], predictor: Union[tf.keras.Model, 'keras.Model'],
-                              meta: dict) -> 'IntegratedGradients':
-    layer_num = meta['params']['layer']
-    if layer_num == 0:
-        layer = None
-    else:
-        layer = predictor.layers[layer_num]
-
-    with open(Path(path, 'explainer.dill'), 'rb') as f:
-        explainer = dill.load(f)
-    explainer.reset_predictor(predictor)
-    explainer.layer = layer
-
-    return explainer
-
-
-def _save_IntegratedGradients(explainer: 'IntegratedGradients', path: Union[str, os.PathLike]) -> None:
-    model = explainer.model
-    layer = explainer.layer
-    explainer.model = explainer.layer = None
-    with open(Path(path, 'explainer.dill'), 'wb') as f:
-        dill.dump(explainer, f, recurse=True)
-    explainer.model = model
-    explainer.layer = layer
 
 
 def _load_AnchorImage(path: Union[str, os.PathLike], predictor: Callable, meta: dict) -> 'AnchorImage':
