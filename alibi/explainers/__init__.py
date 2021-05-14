@@ -6,21 +6,13 @@ from .ale import ALE, plot_ale
 from .anchor_tabular import AnchorTabular, DistributedAnchorTabular
 from .anchor_text import AnchorText
 from .anchor_image import AnchorImage
-from .cem import CEM
-from .cfproto import CounterFactualProto
-from .counterfactual import CounterFactual
-from .integrated_gradients import IntegratedGradients
 
 __all__ = ["ALE",
            "AnchorTabular",
            "DistributedAnchorTabular",
            "AnchorText",
            "AnchorImage",
-           "CEM",
-           "CounterFactual",
-           "CounterFactualProto",
            "plot_ale",
-           "IntegratedGradients"
            ]
 
 try:
