@@ -2,8 +2,6 @@ import pytest
 import numpy as np
 from sklearn.datasets import load_iris
 from sklearn.linear_model import LogisticRegression
-import tensorflow as tf
-import keras
 
 from alibi.api.defaults import DEFAULT_META_CF, DEFAULT_DATA_CF
 from alibi.explainers.counterfactual import _define_func
@@ -26,16 +24,6 @@ def cf_iris_explainer(request, logistic_iris):
                                   max_lam_steps=10)
 
     yield X, y, lr, cf_explainer
-    keras.backend.clear_session()
-    tf.keras.backend.clear_session()
-
-
-@pytest.fixture
-def keras_mnist_cf_explainer(request, models):
-    cf_explainer = CounterFactual(predict_fn=models[0], shape=(1, 28, 28, 1),
-                                  target_class=request.param, lam_init=1e-1, max_iter=1000,
-                                  max_lam_steps=10)
-    yield models[0], cf_explainer
     keras.backend.clear_session()
     tf.keras.backend.clear_session()
 
@@ -63,93 +51,3 @@ def test_define_func(logistic_iris, target_class):
         # highest probability different to the class of x
         ix2 = np.argsort(-probas)[:, 1]
         assert func(x) == probas[:, ix2]
-
-
-@pytest.mark.tf1
-@pytest.mark.parametrize('cf_iris_explainer',
-                         ['other', 'same', 0, 1, 2],
-                         ids='target={}'.format,
-                         indirect=True)
-def test_cf_explainer_iris(disable_tf2, cf_iris_explainer):
-    X, y, lr, cf = cf_iris_explainer
-    x = X[0].reshape(1, -1)
-    probas = cf.predict_fn(x)
-    pred_class = probas.argmax()
-
-    assert cf.data_shape == (1, 4)
-
-    # test explanation
-    exp = cf.explain(x)
-    assert exp.meta.keys() == DEFAULT_META_CF.keys()
-    assert exp.data.keys() == DEFAULT_DATA_CF.keys()
-
-    x_cf = exp.cf['X']
-    assert x.shape == x_cf.shape
-
-    probas_cf = cf.predict_fn(x_cf)
-    pred_class_cf = probas_cf.argmax()
-
-    # get attributes for testing
-    target_class = cf.target_class
-    target_proba = cf.sess.run(cf.target_proba)
-    tol = cf.tol
-    pred_class_fn = cf.predict_class_fn
-
-    # check if target_class condition is met
-    if target_class == 'same':
-        assert pred_class == pred_class_cf
-    elif target_class == 'other':
-        assert pred_class != pred_class_cf
-    elif isinstance(target_class, int):
-        assert pred_class_cf == target_class
-
-    if exp.success:
-        assert np.abs(pred_class_fn(x_cf) - target_proba) <= tol
-
-
-@pytest.mark.tf1
-@pytest.mark.parametrize('keras_mnist_cf_explainer',
-                         ['other', 'same', 4, 9],
-                         ids='target={}'.format,
-                         indirect=True)
-@pytest.mark.parametrize('models',
-                         [('mnist-logistic-tf2.2.0',), ('mnist-logistic-tf1.15.2.h5',)],
-                         ids='model={}'.format,
-                         indirect=True)
-def test_keras_mnist_explainer(disable_tf2, keras_mnist_cf_explainer, mnist_data):
-    model, cf = keras_mnist_cf_explainer
-    X = mnist_data['X_train']
-
-    x = X[0:1]
-    probas = cf.predict_fn(x)
-    pred_class = probas.argmax()
-
-    assert cf.data_shape == (1, 28, 28, 1)
-
-    # test explanation
-    exp = cf.explain(x)
-    assert exp.meta.keys() == DEFAULT_META_CF.keys()
-    assert exp.data.keys() == DEFAULT_DATA_CF.keys()
-
-    x_cf = exp.cf['X']
-    assert x.shape == x_cf.shape
-
-    probas_cf = cf.predict_fn(x_cf)
-    pred_class_cf = probas_cf.argmax()
-
-    # get attributes for testing
-    target_class = cf.target_class
-    target_proba = cf.sess.run(cf.target_proba)
-    tol = cf.tol
-    pred_class_fn = cf.predict_class_fn
-
-    # check if target_class condition is met
-    if target_class == 'same':
-        assert pred_class == pred_class_cf
-    elif target_class == 'other':
-        assert pred_class != pred_class_cf
-    elif isinstance(target_class, int):
-        assert pred_class_cf == target_class
-
-    if exp.success:
-        assert np.abs(pred_class_fn(x_cf) - target_proba) <= tol
